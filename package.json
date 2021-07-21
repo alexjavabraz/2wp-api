@@ -50,6 +50,7 @@
     "!*/__tests__"
   ],
   "dependencies": {
+    "@ledgerhq/hw-app-btc": "^6.2.0",
     "@loopback/boot": "^3.1.2",
     "@loopback/core": "^2.13.1",
     "@loopback/repository": "^3.3.0",
@@ -57,6 +58,7 @@
     "@loopback/rest-explorer": "^3.0.5",
     "@loopback/service-proxy": "^3.0.5",
     "@rsksmart/rsk-precompiled-abis": "^3.0.0-PAPYRUS",
+    "bitcoinjs-lib": "^5.2.0",
     "dotenv": "^8.2.0",
     "log4js": "^6.3.0",
     "loopback-connector-kv-redis": "^3.0.3",

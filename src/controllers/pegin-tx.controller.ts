@@ -1,12 +1,18 @@
 import {repository} from '@loopback/repository';
 import {getModelSchemaRef, post, requestBody, response} from '@loopback/rest';
 import {config} from 'dotenv';
+import {splitTransaction} from '@ledgerhq/hw-app-btc/lib/splitTransaction';
+import {serializeTransactionOutputs} from '@ledgerhq/hw-app-btc/lib/serializeTransaction';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import peginAddressVerifier from 'pegin-address-verificator';
 import {CreatePeginTxData, NormalizedTx, TxInput, TxOutput} from '../models';
 import {SessionRepository} from '../repositories';
-import {BridgeService} from '../services';
+import {BridgeService, TxService} from '../services';
+import {Transaction} from '@ledgerhq/hw-app-btc/lib/types';
+import {inject} from '@loopback/core';
+import * as bitcoin from 'bitcoinjs-lib';
+import * as constants from '../constants';
 
 config();
 
@@ -14,6 +20,8 @@ export class PeginTxController {
   constructor(
     @repository(SessionRepository)
     public sessionRepository: SessionRepository,
+    @inject('services.TxService')
+    protected txService: TxService,
   ) {}
 
   @post('/pegin-tx')
@@ -79,10 +87,16 @@ export class PeginTxController {
               fee,
             ),
           );
+          return Promise.all([inputs, this.getLedgerInputs(inputs)]);
+        })
+        .then(([inputs, ledgerInputs]) => {
+          const outputScriptHex: Buffer = this.getOutputScriptHex(outputs);
           resolve(
             new NormalizedTx({
               inputs,
               outputs,
+              ledgerInputs,
+              outputScriptHex,
             }),
           );
         })
@@ -132,9 +146,53 @@ export class PeginTxController {
     inputs.forEach(input => {
       capacity += input.amount ? +input.amount : 0;
     });
+    const change = capacity - (amountToTransferInSatoshi + fee);
     return new TxOutput({
-      amount: (capacity - (amountToTransferInSatoshi + fee)).toFixed(0),
+      amount: (change >= 0 ? change : 0).toFixed(0),
       address: changeAddress,
     });
+  }
+
+  private getLedgerInputs(inputs: TxInput[]): Promise<Transaction[]> {
+    return new Promise<Transaction[]>((resolve, reject) => {
+      const txPromises = inputs.map(input =>
+        this.txService.txProvider(input.prev_hash),
+      );
+      Promise.all(txPromises)
+        .then(txList => {
+          const responseTxList: Transaction[] = txList.map(tx => {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const [, , , , , , , , , , , , hex] = tx;
+            const bitcoinTx = bitcoin.Transaction.fromHex(hex);
+            return splitTransaction(hex, bitcoinTx.hasWitnesses());
+          });
+          resolve(responseTxList);
+        })
+        .catch(reject);
+    });
+  }
+
+  private getOutputScriptHex(outputs: TxOutput[]) {
+    const NETWORK =
+      process.env.NETWORK === constants.BTC_NETWORK_MAINNET
+        ? bitcoin.networks.bitcoin
+        : bitcoin.networks.testnet;
+    const txBuilder = new bitcoin.TransactionBuilder(NETWORK);
+    outputs.forEach(output => {
+      if (output.op_return_data) {
+        const buffer = Buffer.from(output.op_return_data, 'hex');
+        const script: bitcoin.Payment = bitcoin.payments.embed({
+          data: [buffer],
+        });
+        if (script.output) {
+          txBuilder.addOutput(script.output, 0);
+        }
+      } else if (output.address) {
+        txBuilder.addOutput(output.address, Number(output.amount));
+      }
+    });
+    const partialTx = txBuilder.buildIncomplete().toHex();
+    return serializeTransactionOutputs(splitTransaction(partialTx));
   }
 }

@@ -1,4 +1,4 @@
-import {Client} from '@loopback/testlab';
+import {Client, expect} from '@loopback/testlab';
 import {TwpapiApplication} from '../..';
 import {setupApplication} from './test-helper';
 import * as constants from '../../constants';
@@ -17,7 +17,7 @@ describe('Pegin Tx Controller', () => {
 
   it('invokes POST /pegin-tx with P2PKH address', async () => {
     const peginConf = await client.get('/pegin-configuration').expect(200);
-    await client
+    const balance = await client
       .post('/balance')
       .send({
         sessionId: peginConf.body.sessionId,
@@ -59,19 +59,25 @@ describe('Pegin Tx Controller', () => {
       .post('/tx-fee')
       .send({
         sessionId: peginConf.body.sessionId,
-        amount: 200,
-        accountType: constants.BITCOIN_NATIVE_SEGWIT_ADDRESS,
+        amount: Number((balance.body.legacy / 2).toFixed(0)),
+        accountType: constants.BITCOIN_LEGACY_ADDRESS,
       })
       .expect(200);
     const peginTxData = {
       sessionId: peginConf.body.sessionId,
-      amountToTransferInSatoshi: 1000000,
+      amountToTransferInSatoshi: Number((balance.body.legacy / 2).toFixed(0)),
       refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
       feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
       changeAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
     };
-    await client.post('/pegin-tx').send(peginTxData).expect(200);
+    const peginTx = await client
+      .post('/pegin-tx')
+      .send(peginTxData)
+      .expect(200);
+    expect(peginTx.body.inputs.length).to.be.greaterThan(0);
+    expect(peginTx.body.outputs.length).to.be.exactly(3);
+    expect(peginTx.body.outputScriptHex.data).to.be.Array();
   });
   it('invokes POST /pegin-tx with P2SH address', async () => {
     const peginConf = await client.get('/pegin-configuration').expect(200);
@@ -117,19 +123,27 @@ describe('Pegin Tx Controller', () => {
       .post('/tx-fee')
       .send({
         sessionId: peginConf.body.sessionId,
-        amount: 200,
-        accountType: constants.BITCOIN_LEGACY_ADDRESS,
+        amount: Number((balance.body.nativeSegwit / 2).toFixed(0)),
+        accountType: constants.BITCOIN_NATIVE_SEGWIT_ADDRESS,
       })
       .expect(200);
     const peginTxData = {
       sessionId: peginConf.body.sessionId,
-      amountToTransferInSatoshi: balance.body.legacy,
-      refundAddress: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
+      amountToTransferInSatoshi: Number(
+        (balance.body.nativeSegwit / 2).toFixed(0),
+      ),
+      refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
-      feeLevel: constants.BITCOIN_AVERAGE_FEE_LEVEL,
+      feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
       changeAddress: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
     };
-    await client.post('/pegin-tx').send(peginTxData).expect(200);
+    const peginTx = await client
+      .post('/pegin-tx')
+      .send(peginTxData)
+      .expect(200);
+    expect(peginTx.body.inputs.length).to.be.greaterThan(0);
+    expect(peginTx.body.outputs.length).to.be.exactly(3);
+    expect(peginTx.body.outputScriptHex.data).to.be.Array();
   });
   it('invokes POST /pegin-tx with bech32 address', async () => {
     const peginConf = await client.get('/pegin-configuration').expect(200);
@@ -175,26 +189,26 @@ describe('Pegin Tx Controller', () => {
       .post('/tx-fee')
       .send({
         sessionId: peginConf.body.sessionId,
-        amount: 200,
-        accountType: constants.BITCOIN_SLOW_FEE_LEVEL,
+        amount: Number((balance.body.nativeSegwit / 2).toFixed(0)),
+        accountType: constants.BITCOIN_NATIVE_SEGWIT_ADDRESS,
       })
       .expect(200);
     const peginTxData = {
       sessionId: peginConf.body.sessionId,
-      amountToTransferInSatoshi: balance.body.legacy,
-      refundAddress: 'tb1qkfcu7q7q6y7xmfe5glp9amsm45x0um59rwwmsmsmd355g32',
+      amountToTransferInSatoshi: Number(
+        (balance.body.nativeSegwit / 2).toFixed(0),
+      ),
+      refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
       feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
-      changeAddress: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
+      changeAddress: 'tb1qtanvhhl8ve32tcdxkrsamyy6vq5p62ctdv89l0',
     };
-    await client
+    const peginTx = await client
       .post('/pegin-tx')
       .send(peginTxData)
-      .expect({
-        error: {
-          statusCode: 500,
-          message: 'Internal Server Error',
-        },
-      });
+      .expect(200);
+    expect(peginTx.body.inputs.length).to.be.greaterThan(0);
+    expect(peginTx.body.outputs.length).to.be.exactly(3);
+    expect(peginTx.body.outputScriptHex.data).to.be.Array();
   });
 });
