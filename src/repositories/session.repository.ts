@@ -1,7 +1,14 @@
 import {inject} from '@loopback/core';
 import {DefaultKeyValueRepository} from '@loopback/repository';
 import {RedisDataSource} from '../datasources';
-import {AccountBalance, FeeAmountData, Session, TxInput, Utxo} from '../models';
+import {
+  AccountBalance,
+  FeeAmountData,
+  NormalizedTx,
+  Session,
+  TxInput,
+  Utxo,
+} from '../models';
 import * as constants from '../constants';
 
 export class SessionRepository extends DefaultKeyValueRepository<Session> {
@@ -77,6 +84,28 @@ export class SessionRepository extends DefaultKeyValueRepository<Session> {
               ),
             );
           }
+        })
+        .catch(reject);
+    });
+  }
+
+  setNormalizedTx(
+    sessionId: string,
+    normalizedTx: NormalizedTx,
+  ): Promise<void> {
+    return this.get(sessionId).then(sessionObject => {
+      sessionObject.normalizedTx = normalizedTx;
+      return this.set(sessionId, sessionObject);
+    });
+  }
+
+  getNormalizedTx(sessionId: string): Promise<NormalizedTx> {
+    return new Promise<NormalizedTx>((resolve, reject) => {
+      this.get(sessionId)
+        .then(sessionObject => {
+          const normalizedTx =
+            sessionObject.normalizedTx ?? new NormalizedTx({});
+          resolve(normalizedTx);
         })
         .catch(reject);
     });

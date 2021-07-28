@@ -91,14 +91,22 @@ export class PeginTxController {
         })
         .then(([inputs, ledgerInputs]) => {
           const outputScriptHex: Buffer = this.getOutputScriptHex(outputs);
-          resolve(
-            new NormalizedTx({
-              inputs,
-              outputs,
-              ledgerInputs,
-              outputScriptHex,
-            }),
-          );
+          const normalizedTx = new NormalizedTx({
+            inputs,
+            outputs,
+            ledgerInputs,
+            outputScriptHex,
+          });
+          return Promise.all([
+            normalizedTx,
+            this.sessionRepository.setNormalizedTx(
+              createPeginTxData.sessionId,
+              normalizedTx,
+            ),
+          ]);
+        })
+        .then(([normalizedTx]) => {
+          resolve(normalizedTx);
         })
         .catch(reject);
     });

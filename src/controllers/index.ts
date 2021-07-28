@@ -4,3 +4,4 @@ export * from './pegin-tx.controller';
 export * from './tx-fee.controller';
 export * from './broadcast.controller';
 export * from './tx.controller';
+export * from './signed-tx.controller';

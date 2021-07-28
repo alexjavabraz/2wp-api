@@ -2,6 +2,7 @@ import {Entity, model, property} from '@loopback/repository';
 import {AddressBalance} from './address-balance.model';
 import {TxInput} from './tx-input.model';
 import {FeeAmountData} from './fee-amount-data.model';
+import {NormalizedTx} from './normalized-tx.model';
 
 @model({settings: {strict: false}})
 export class Session extends Entity {
@@ -38,6 +39,12 @@ export class Session extends Entity {
     required: false,
   })
   fees?: FeeAmountData;
+
+  @property({
+    type: 'object',
+    required: false,
+  })
+  normalizedTx?: NormalizedTx;
 
   // Define well-known properties here
 

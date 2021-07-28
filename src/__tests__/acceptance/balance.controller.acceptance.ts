@@ -1,13 +1,20 @@
 import {Client, expect} from '@loopback/testlab';
 import {TwpapiApplication} from '../..';
 import {setupApplication} from './test-helper';
+// import {sinon} from '@loopback/testlab/dist/sinon';
+// import {FeeLevel, FeeLevelProvider} from '../../services';
 
 describe('Balance Controller', () => {
   let app: TwpapiApplication;
   let client: Client;
+  // let feeLevelService: FeeLevelProvider;
+  // let feeProvider: sinon.SinonStub;
 
   before('setupApplication', async () => {
     ({app, client} = await setupApplication());
+    // feeLevelService = {feeProvider: sinon.stub()};
+    // feeProvider = feeLevelService.feeProvider as sinon.SinonStub;
+    // app.service<FeeLevelProvider>(feeLevelService)
   });
 
   after(async () => {

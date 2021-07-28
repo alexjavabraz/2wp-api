@@ -15,3 +15,5 @@ export * from './broadcast-response.model';
 export * from './broadcast-request.model';
 export * from './tx.model';
 export * from './tx-request.model';
+export * from './signed-tx-response.model';
+export * from './signed-tx-request.model';
