@@ -87,7 +87,7 @@ export class PeginTxController {
               fee,
             ),
           );
-          return Promise.all([inputs, this.getLedgerInputs(inputs)]);
+          return Promise.all([this.getTxInputs(inputs), this.getLedgerInputs(inputs)]);
         })
         .then(([inputs, ledgerInputs]) => {
           const outputScriptHex: Buffer = this.getOutputScriptHex(outputs);
@@ -202,5 +202,23 @@ export class PeginTxController {
     });
     const partialTx = txBuilder.buildIncomplete().toHex();
     return serializeTransactionOutputs(splitTransaction(partialTx));
+  }
+
+  private getTxInputs(inputs: TxInput[]): Promise<TxInput[]> {
+    return new Promise<TxInput[]>((resolve, reject) => {
+      const txHexPromises = inputs
+        .map((input) => this.txService.txProvider(input.prev_hash));
+      Promise.all(txHexPromises)
+        .then((txList) => {
+          txList.forEach((tx, idx) => {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const [, , , , , , , , , , , , hex] = tx;
+            inputs[idx].hex = hex;
+          });
+          resolve(inputs);
+        })
+        .catch(reject);
+    });
   }
 }

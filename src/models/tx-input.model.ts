@@ -46,6 +46,11 @@ export class TxInput extends Model {
   })
   amount?: string;
 
+  @property({
+    type: 'string',
+  })
+  hex?: string;
+
   constructor(data?: Partial<TxInput>) {
     super(data);
   }

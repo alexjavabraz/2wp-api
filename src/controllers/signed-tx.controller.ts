@@ -5,12 +5,16 @@ import {SessionRepository} from '../repositories';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as constants from '../constants';
 import {Signer} from 'bitcoinjs-lib';
+import {inject} from '@loopback/core';
+import {TxService} from '../services';
 
 export class SignedTxController {
   private NETWORK: bitcoin.Network;
   constructor(
     @repository(SessionRepository)
     public sessionRepository: SessionRepository,
+    @inject('services.TxService')
+    protected txService: TxService,
   ) {
     this.NETWORK =
       process.env.NETWORK === constants.BTC_NETWORK_MAINNET
@@ -34,11 +38,14 @@ export class SignedTxController {
       this.sessionRepository
         .getNormalizedTx(req.sessionId)
         .then((normalizedTx: NormalizedTx) => {
+          console.log(normalizedTx.inputs);
           normalizedTx.inputs.forEach(input => {
-            const utxo = bitcoin.Transaction.fromHex(input.prev_hash);
+            const utxo = input.hex ? bitcoin.Transaction.fromHex(input.hex)
+              : bitcoin.Transaction.fromHex('');
             const addressItem = req.addressList.find(
               ({address}) => input.address === address,
             );
+            console.log(utxo);
             if (addressItem) {
               const redeemScript = this.getRedeem(addressItem.publicKey);
               psbt.addInput({
