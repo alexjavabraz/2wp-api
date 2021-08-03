@@ -1,9 +1,10 @@
 // import {Client, expect} from '@loopback/testlab';
 // import {TwpapiApplication} from '../..';
 // import {setupApplication} from './test-helper';
+// import {baseState, testCase0} from '../fixtures/testCase';
 // import * as constants from '../../constants';
 //
-// describe('Signed tx Controller', () => {
+// describe('Signed Tx Controller', () => {
 //   let app: TwpapiApplication;
 //   let client: Client;
 //
@@ -15,44 +16,13 @@
 //     await app.stop();
 //   });
 //
-//   it('invokes POST /broadcast with value on hex', async () => {
+//   it('invokes POST /pegin-tx with P2PKH address', async () => {
 //     const peginConf = await client.get('/pegin-configuration').expect(200);
 //     const balance = await client
 //       .post('/balance')
 //       .send({
 //         sessionId: peginConf.body.sessionId,
-//         addressList: [
-//           {
-//             path: [2147483692, 2147483649, 2147483648, 0, 0],
-//             serializedPath: "m/44'/1'/0'/0/0",
-//             address: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
-//           },
-//           {
-//             path: [2147483692, 2147483649, 2147483648, 1, 0],
-//             serializedPath: "m/44'/1'/0'/1/0",
-//             address: 'mqCjBpQ75Y5sSGzFtJtSQQZqhJze9eaKjV',
-//           },
-//           {
-//             path: [2147483697, 2147483649, 2147483648, 0, 0],
-//             serializedPath: "m/49'/1'/0'/0/0",
-//             address: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
-//           },
-//           {
-//             path: [2147483697, 2147483649, 2147483648, 1, 0],
-//             serializedPath: "m/49'/1'/0'/1/0",
-//             address: '2NCZ2CNYiz4rrHq3miUHerUMcLyeWU4gw9C',
-//           },
-//           {
-//             path: [2147483732, 2147483649, 2147483648, 0, 0],
-//             serializedPath: "m/84'/1'/0'/0/0",
-//             address: 'tb1qtanvhhl8ve32tcdxkrsamyy6vq5p62ctdv89l0',
-//           },
-//           {
-//             path: [2147483732, 2147483649, 2147483648, 1, 0],
-//             serializedPath: "m/84'/1'/0'/1/0",
-//             address: 'tb1qfuk3j0l4qn4uzstc47uwk68kedmjwuucl7avqr',
-//           },
-//         ],
+//         addressList: baseState.addressList,
 //       })
 //       .expect(200);
 //     await client
@@ -63,13 +33,20 @@
 //         accountType: constants.BITCOIN_LEGACY_ADDRESS,
 //       })
 //       .expect(200);
+//     const {
+//       amountToTransferInSatoshi,
+//       refundAddress,
+//       recipient,
+//       feeLevel,
+//       changeAddress,
+//     } = testCase0;
 //     const peginTxData = {
 //       sessionId: peginConf.body.sessionId,
-//       amountToTransferInSatoshi: Number((balance.body.legacy / 2).toFixed(0)),
-//       refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
-//       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
-//       feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
-//       changeAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
+//       amountToTransferInSatoshi,
+//       refundAddress,
+//       recipient,
+//       feeLevel,
+//       changeAddress,
 //     };
 //     const peginTx = await client
 //       .post('/pegin-tx')
@@ -78,12 +55,75 @@
 //     expect(peginTx.body.inputs.length).to.be.greaterThan(0);
 //     expect(peginTx.body.outputs.length).to.be.exactly(3);
 //     expect(peginTx.body.outputScriptHex.data).to.be.Array();
-//     await client
-//       .post('/broadcast')
+//   });
+//   it('invokes POST /pegin-tx with P2SH address', async () => {
+//     const peginConf = await client.get('/pegin-configuration').expect(200);
+//     const balance = await client
+//       .post('/balance')
 //       .send({
 //         sessionId: peginConf.body.sessionId,
-//         signatures: ['',''],
+//         addressList: baseState.addressList,
 //       })
 //       .expect(200);
+//     await client
+//       .post('/tx-fee')
+//       .send({
+//         sessionId: peginConf.body.sessionId,
+//         amount: Number((balance.body.nativeSegwit / 2).toFixed(0)),
+//         accountType: constants.BITCOIN_NATIVE_SEGWIT_ADDRESS,
+//       })
+//       .expect(200);
+//     const peginTxData = {
+//       sessionId: peginConf.body.sessionId,
+//       amountToTransferInSatoshi: Number(
+//         (balance.body.nativeSegwit / 2).toFixed(0),
+//       ),
+//       refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
+//       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
+//       feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
+//       changeAddress: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
+//     };
+//     const peginTx = await client
+//       .post('/pegin-tx')
+//       .send(peginTxData)
+//       .expect(200);
+//     expect(peginTx.body.inputs.length).to.be.greaterThan(0);
+//     expect(peginTx.body.outputs.length).to.be.exactly(3);
+//     expect(peginTx.body.outputScriptHex.data).to.be.Array();
+//   });
+//   it('invokes POST /pegin-tx with bech32 address', async () => {
+//     const peginConf = await client.get('/pegin-configuration').expect(200);
+//     const balance = await client
+//       .post('/balance')
+//       .send({
+//         sessionId: peginConf.body.sessionId,
+//         addressList: baseState.addressList,
+//       })
+//       .expect(200);
+//     await client
+//       .post('/tx-fee')
+//       .send({
+//         sessionId: peginConf.body.sessionId,
+//         amount: Number((balance.body.nativeSegwit / 2).toFixed(0)),
+//         accountType: constants.BITCOIN_NATIVE_SEGWIT_ADDRESS,
+//       })
+//       .expect(200);
+//     const peginTxData = {
+//       sessionId: peginConf.body.sessionId,
+//       amountToTransferInSatoshi: Number(
+//         (balance.body.nativeSegwit / 2).toFixed(0),
+//       ),
+//       refundAddress: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
+//       recipient: '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
+//       feeLevel: constants.BITCOIN_FAST_FEE_LEVEL,
+//       changeAddress: 'tb1qtanvhhl8ve32tcdxkrsamyy6vq5p62ctdv89l0',
+//     };
+//     const peginTx = await client
+//       .post('/pegin-tx')
+//       .send(peginTxData)
+//       .expect(200);
+//     expect(peginTx.body.inputs.length).to.be.greaterThan(0);
+//     expect(peginTx.body.outputs.length).to.be.exactly(3);
+//     expect(peginTx.body.outputScriptHex.data).to.be.Array();
 //   });
 // });

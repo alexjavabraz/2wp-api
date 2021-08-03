@@ -1,68 +1,65 @@
 import {Client, expect} from '@loopback/testlab';
 import {TwpapiApplication} from '../..';
 import {setupApplication} from './test-helper';
-// import {sinon} from '@loopback/testlab/dist/sinon';
-// import {FeeLevel, FeeLevelProvider} from '../../services';
+import {baseState} from '../fixtures/testCase';
+import {getMockFeeLevelService, getMockUtxoProviderService} from '../helper';
+import {FeeLevel, UtxoProvider} from '../../services';
+import {sinon} from '@loopback/testlab/dist/sinon';
 
 describe('Balance Controller', () => {
   let app: TwpapiApplication;
   let client: Client;
-  // let feeLevelService: FeeLevelProvider;
-  // let feeProvider: sinon.SinonStub;
+    let feeLevelService: FeeLevel;
+    let feeProvider: sinon.SinonStub;
+    let utxoProviderService: UtxoProvider;
+    let utxoProvider: sinon.SinonStub;
+  beforeEach(resetRepositories);
 
-  before('setupApplication', async () => {
-    ({app, client} = await setupApplication());
-    // feeLevelService = {feeProvider: sinon.stub()};
-    // feeProvider = feeLevelService.feeProvider as sinon.SinonStub;
-    // app.service<FeeLevelProvider>(feeLevelService)
-  });
+  async function resetRepositories() {  
+    const fee = getMockFeeLevelService();
+    feeLevelService = fee.feeLevelService;
+    feeProvider = fee.feeProvider;
+    utxoProviderService = {utxoProvider: sinon.stub()};
+    utxoProvider = utxoProviderService.utxoProvider as sinon.SinonStub;
+    ({app, client} = await setupApplication([
+      {name: 'services.FeeLevel', instance: feeLevelService},
+      {name: 'services.UtxoProvider', instance: utxoProviderService},
+    ]));
+    const fast: number = process.env.FAST_MINING_BLOCK
+      ? +process.env.FAST_MINING_BLOCK
+      : 1;
+    const average: number = process.env.AVERAGE_MINING_BLOCK
+      ? +process.env.AVERAGE_MINING_BLOCK
+      : 6;
+    const slow: number = process.env.LOW_MINING_BLOCK
+      ? +process.env.LOW_MINING_BLOCK
+      : 12;
+    feeProvider.withArgs(fast).resolves(['0.00003']);
+    feeProvider.withArgs(average).resolves(['0.00002']);
+    feeProvider.withArgs(slow).resolves(['0.00001']);
+  }
 
   after(async () => {
     await app.stop();
   });
 
   it('invokes POST /balance', async () => {
+    Object.entries(baseState.utxos).forEach(([address, utxos]) => {
+      utxoProvider.withArgs(address).resolves(utxos);
+    });
     const peginConf = await client.get('/pegin-configuration').expect(200);
     const res = await client
       .post('/balance')
       .send({
         sessionId: peginConf.body.sessionId,
-        addressList: [
-          {
-            path: [2147483692, 2147483649, 2147483648, 0, 0],
-            serializedPath: "m/44'/1'/0'/0/0",
-            address: 'mzMCEHDUAZaKL9BXt9SzasFPUUqM77TqP1',
-          },
-          {
-            path: [2147483692, 2147483649, 2147483648, 1, 0],
-            serializedPath: "m/44'/1'/0'/1/0",
-            address: 'mqCjBpQ75Y5sSGzFtJtSQQZqhJze9eaKjV',
-          },
-          {
-            path: [2147483697, 2147483649, 2147483648, 0, 0],
-            serializedPath: "m/49'/1'/0'/0/0",
-            address: '2NC4DCae9HdL6vjWMDbQwTkYEAB22MF3TPs',
-          },
-          {
-            path: [2147483697, 2147483649, 2147483648, 1, 0],
-            serializedPath: "m/49'/1'/0'/1/0",
-            address: '2NCZ2CNYiz4rrHq3miUHerUMcLyeWU4gw9C',
-          },
-          {
-            path: [2147483732, 2147483649, 2147483648, 0, 0],
-            serializedPath: "m/84'/1'/0'/0/0",
-            address: 'tb1qtanvhhl8ve32tcdxkrsamyy6vq5p62ctdv89l0',
-          },
-          {
-            path: [2147483732, 2147483649, 2147483648, 1, 0],
-            serializedPath: "m/84'/1'/0'/1/0",
-            address: 'tb1qfuk3j0l4qn4uzstc47uwk68kedmjwuucl7avqr',
-          },
-        ],
+        addressList: baseState.addressList,
       })
       .expect(200);
     expect(typeof res.body.segwit).to.eql('number');
     expect(typeof res.body.nativeSegwit).to.eql('number');
     expect(typeof res.body.legacy).to.eql('number');
+    expect(res.body.segwit).to.eql(baseState.balance.segwit);
+    expect(res.body.nativeSegwit).to.eql(baseState.balance.nativeSegwit);
+    expect(res.body.legacy).to.eql(baseState.balance.legacy);
   });
 });

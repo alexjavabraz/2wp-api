@@ -1,4 +1,6 @@
 import {PeginConfiguration, TxInput, Utxo, WalletAddress} from '../models';
+import {FeeLevel, UtxoProvider} from '../services';
+import {sinon} from '@loopback/testlab/dist/sinon';
 
 export function givenPeginConfiguration(
   peginConfiguration?: Partial<PeginConfiguration>,
@@ -126,4 +128,22 @@ export function getMockInputs(): TxInput[] {
     },
   ];
   return txInputs as TxInput[];
+}
+
+export function getMockUtxoProviderService(): {utxoProviderService: UtxoProvider; utxoProvider: sinon.SinonStub;} {
+  const utxoProviderService: UtxoProvider = {utxoProvider: sinon.stub()};
+  const utxoProvider: sinon.SinonStub = utxoProviderService.utxoProvider as sinon.SinonStub;
+  return {
+    utxoProviderService,
+    utxoProvider,
+  };
+}
+
+export function getMockFeeLevelService(): {feeLevelService: FeeLevel; feeProvider: sinon.SinonStub;}{
+  const feeLevelService: FeeLevel = {feeProvider: sinon.stub()};
+  const feeProvider: sinon.SinonStub = feeLevelService.feeProvider as sinon.SinonStub;
+  return {
+    feeLevelService,
+    feeProvider,
+  };
 }
