@@ -11,7 +11,7 @@ describe('Pegin Tx Controller', () => {
   before('setupApplication', async () => {
     ({app, client} = await setupApplication());
   });
-
+1
   after(async () => {
     await app.stop();
   });
