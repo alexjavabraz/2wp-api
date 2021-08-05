@@ -2,7 +2,7 @@ import {Client, expect} from '@loopback/testlab';
 import {TwpapiApplication} from '../..';
 import {setupApplication} from './test-helper';
 import {baseState} from '../fixtures/testCase';
-import {getMockFeeLevelService} from '../helper';
+import {getMockFeeLevelService, getMockUtxoProviderService} from '../helper';
 import {FeeLevel, UtxoProvider} from '../../services';
 import {sinon} from '@loopback/testlab/dist/sinon';
 
@@ -19,8 +19,9 @@ describe('Balance Controller', () => {
     const fee = getMockFeeLevelService();
     feeLevelService = fee.feeLevelService;
     feeProvider = fee.feeProvider;
-    utxoProviderService = {utxoProvider: sinon.stub()};
-    utxoProvider = utxoProviderService.utxoProvider as sinon.SinonStub;
+    const utxo = getMockUtxoProviderService();
+    utxoProviderService = utxo.utxoProviderService;
+    utxoProvider = utxo.utxoProvider;
     ({app, client} = await setupApplication([
       {name: 'services.FeeLevel', instance: feeLevelService},
       {name: 'services.UtxoProvider', instance: utxoProviderService},
