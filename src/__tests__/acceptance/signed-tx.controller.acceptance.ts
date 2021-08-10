@@ -98,7 +98,6 @@ describe('Signed Tx Controller', () => {
         }
       ],
     }
-    console.log(signedTxRequest);
     const signedTx = await client
       .post('/signed-tx')
       .send(signedTxRequest)

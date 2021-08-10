@@ -38,17 +38,17 @@ export class SignedTxController {
       this.sessionRepository
         .getNormalizedTx(req.sessionId)
         .then((normalizedTx: NormalizedTx) => {
-          console.log(normalizedTx.inputs);
-          normalizedTx.inputs.forEach(input => {
+          // console.log(normalizedTx.inputs);
+          normalizedTx.inputs.forEach((input) => {
             const utxo = input.hex
               ? bitcoin.Transaction.fromHex(input.hex)
               : bitcoin.Transaction.fromHex('');
             const addressItem = req.addressList.find(
               ({address}) => input.address === address,
             );
-            console.log(utxo);
             if (addressItem) {
               const redeemScript = this.getRedeem(addressItem.publicKey);
+              // console.log(redeemScript);
               psbt.addInput({
                 hash: utxo.getHash(),
                 index: input.prev_index,
@@ -79,21 +79,23 @@ export class SignedTxController {
             }
           });
           psbt.setVersion(2);
-          return req.signatures.map((signature, index) => {
+          const signPromises = req.signatures.map((signature, index) => {
             const input = normalizedTx.inputs[index];
             const addressItem = req.addressList.find(
               ({address}) => input.address === address,
             );
             if (addressItem)
-              return psbt.signInput(
+              return psbt.signInputAsync(
                 index,
                 this.generateSigner(signature, addressItem.publicKey),
               );
             else reject(new Error('There is no public key provided'));
           });
+          return Promise.all(signPromises);
         })
-        .then(() => psbt.validateSignaturesOfAllInputs())
+        .then(() => psbt.validateSignaturesOfInput(1))
         .then(isValidTx => {
+          // console.log(psbt.txInputs);
           if (!isValidTx) reject(new Error('Invalid Transaction.'));
           psbt.finalizeAllInputs();
           const signedTx = psbt.extractTransaction().toHex();
@@ -103,17 +105,15 @@ export class SignedTxController {
     });
   }
 
-  private getRedeem(pubKey: string) {
-    const {publicKey} = bitcoin.ECPair.fromPublicKey(
-      Buffer.from(pubKey, 'hex'),
-    );
-    const pk = publicKey.toString('hex');
-    const pair = bitcoin.ECPair.fromPublicKey(Buffer.from(pk, 'hex'));
-    const p2wpkh = bitcoin.payments.p2wpkh({
-      pubkey: pair.publicKey,
-      network: this.NETWORK,
-    });
-    const p2sh = bitcoin.payments.p2sh({redeem: p2wpkh, network: this.NETWORK});
+  private static compressPublicKey(pubKey: string) {
+    const { publicKey } = bitcoin.ECPair.fromPublicKey(Buffer.from(pubKey, 'hex'));
+    return publicKey.toString('hex');
+  }
+  private getRedeem(publicKey: string) {
+    const pubkey = SignedTxController.compressPublicKey(publicKey);
+    const pair = bitcoin.ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'));
+    const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: pair.publicKey, network: this.NETWORK });
+    const p2sh = bitcoin.payments.p2sh({ redeem: p2wpkh, network: this.NETWORK });
     return p2sh.redeem?.output;
   }
 
